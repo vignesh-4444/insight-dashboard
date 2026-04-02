@@ -1,31 +1,50 @@
-import { useState, useMemo } from "react";
-import { mockData, computeStats, getCategories } from "@/data/mockData";
+import { useState, useMemo, useEffect } from "react";
 import StatsCards from "@/components/StatsCards";
 import DataTable from "@/components/DataTable";
 import CategoryFilter from "@/components/CategoryFilter";
 import { BarChart3 } from "lucide-react";
 
-/**
- * Main Dashboard Page
- * Data flow: mockData → filter → compute stats → render
- * In production, replace mockData with fetch("/data") call.
- */
 const Index = () => {
+
   const [categoryFilter, setCategoryFilter] = useState("");
 
-  // Filter data based on selected category
+  const [data, setData] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>({
+    totalValue: 0,
+    completedCount: 0,
+    totalItems: 0,
+    percentCompleted: 0,
+  });
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:5000/data")
+      .then(res => res.json())
+      .then(setData);
+
+    fetch("http://127.0.0.1:5000/stats")
+      .then(res => res.json())
+      .then((data) => {
+        setStats({
+          totalValue: data.total_value,
+          completedCount: data.completed_count,
+          totalItems: data.total_items,
+          percentCompleted: data.percent_completed,
+       });
+    });
+  }, []);
+
   const filteredData = useMemo(
-    () => (categoryFilter ? mockData.filter((item) => item.category === categoryFilter) : mockData),
-    [categoryFilter]
+    () => (categoryFilter ? data.filter((item) => item.category === categoryFilter) : data),
+    [data, categoryFilter]
   );
 
-  // Compute stats from filtered dataset
-  const stats = useMemo(() => computeStats(filteredData), [filteredData]);
-  const categories = useMemo(() => getCategories(mockData), []);
+  const categories = useMemo(
+    () => [...new Set(data.map((item) => item.category))],
+    [data]
+  );
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -41,7 +60,6 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Content */}
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         <StatsCards {...stats} />
         <div>
